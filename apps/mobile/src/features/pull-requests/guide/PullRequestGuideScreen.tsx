@@ -21,12 +21,24 @@ import { PullRequestMarkdown, PullRequestMarkdownRepository } from "../PullReque
 import { usePullRequestDiff, type PullRequestParams } from "../usePullRequestDiff";
 import { ReviewGuideExcerpt } from "./ReviewGuideExcerpt";
 import { reviewGuideState } from "./reviewGuideState";
+import { useEnvironmentQuery } from "../../../state/query";
+import { composerPullRequests } from "../../../state/pull-requests";
+import { usePullRequestPermissions } from "../usePullRequestPermissions";
+import { pullRequestTarget } from "../usePullRequestDiff";
 import { useReviewGuide } from "./useReviewGuide";
 
 export type GuideStopParams = PullRequestParams & {
   readonly position: number;
   readonly guideHeadSha: string;
   readonly guideGeneratedAt: string;
+};
+
+const attentionLabels = {
+  tradeoff: "A tradeoff to weigh",
+  contract: "A contract to check",
+  product: "A product call",
+  risk: "A risk to judge",
+  accessibility: "An accessibility call",
 };
 
 function GuideNotice({ state }: { readonly state: ReturnType<typeof useReviewGuide> }) {
@@ -140,6 +152,10 @@ export function PullRequestGuideContent({ params }: { readonly params: PullReque
 export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideStopParams>) {
   const navigation = useNavigation();
   const state = useReviewGuide(route.params);
+  const detail = useEnvironmentQuery(composerPullRequests.detail(pullRequestTarget(route.params)));
+  const permissions = usePullRequestPermissions(route.params, detail.data);
+  const canReview =
+    permissions.verdicts.length > 0 && detail.data?.headSha === route.params.guideHeadSha;
   const { guide, stale } = reviewGuideState(state.data);
   const position = Math.max(0, Math.min(route.params.position, (guide?.stops.length ?? 1) - 1));
   const stop = guide?.stops[Math.max(0, position)];
@@ -218,14 +234,12 @@ export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideSto
                 <Text className="text-2xl leading-8 font-t3-semibold">{stop.title}</Text>
                 <PullRequestMarkdown markdown={stop.summary} />
                 {stop.attention ? (
-                  <View className="gap-3 border-l-2 border-warning-foreground pl-4 py-1">
+                  <View className="gap-3 rounded-xl border border-border bg-grouped-card p-4">
                     <View className="flex-row items-center gap-2">
-                      <SymbolView
-                        name="eye"
-                        size={17}
-                        tintColorClassName="accent-warning-foreground"
-                      />
-                      <Text className="text-sm font-t3-semibold">Look closely</Text>
+                      <SymbolView name="eye" size={17} tintColorClassName="accent-icon-muted" />
+                      <Text className="text-sm font-t3-semibold">
+                        {attentionLabels[stop.attention.kind]}
+                      </Text>
                     </View>
                     <PullRequestMarkdown markdown={stop.attention.note} />
                   </View>
@@ -238,6 +252,16 @@ export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideSto
                   stop.excerpts.map((excerpt) => (
                     <ReviewGuideExcerpt
                       key={`${guide?.headSha}:${JSON.stringify(excerpt)}`}
+                      onOpen={() =>
+                        navigation.dispatch(
+                          StackActions.push("PullRequestFile", {
+                            ...route.params,
+                            path: excerpt.path,
+                            focus: { side: excerpt.side, start: excerpt.start, end: excerpt.end },
+                            fileSelectionId: `guide:${position}:${excerpt.path}:${excerpt.start}`,
+                          }),
+                        )
+                      }
                       excerpt={excerpt}
                       file={excerptFiles.get(excerpt.path)}
                       loading={diff.isPending || (missing && diff.nextCursor !== null)}
@@ -294,7 +318,11 @@ export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideSto
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={
-                    guide && position < guide.stops.length - 1 ? "Next stop" : "Finish tour"
+                    guide && position < guide.stops.length - 1
+                      ? "Next stop"
+                      : canReview
+                        ? "Finish review"
+                        : "Finish tour"
                   }
                   className="mt-2 flex-row items-center gap-4 border-t border-border-subtle pt-5 pb-2 active:opacity-60"
                   onPress={() =>
@@ -305,7 +333,12 @@ export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideSto
                             position: stepTourPosition(position, 1, guide.stops.length),
                           }),
                         )
-                      : navigation.dispatch(StackActions.popTo("PullRequest", route.params))
+                      : canReview
+                        ? navigation.navigate("PullRequestReview", {
+                            ...route.params,
+                            mode: "review",
+                          })
+                        : navigation.dispatch(StackActions.popTo("PullRequest", route.params))
                   }
                 >
                   <View className="min-w-0 flex-1 gap-1">
@@ -317,7 +350,9 @@ export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideSto
                     <Text className="text-base font-t3-semibold">
                       {guide && position < guide.stops.length - 1
                         ? guide.stops[position + 1]?.title
-                        : "Finish tour"}
+                        : canReview
+                          ? "Finish review"
+                          : "Finish tour"}
                     </Text>
                   </View>
                   <View className="h-11 w-11 items-center justify-center rounded-full bg-foreground">

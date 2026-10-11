@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { PullRequestReviewGuideExcerpt } from "@t3tools/contracts";
 import { excerptRows, fileDiffRows, rowsToPatch } from "@t3tools/client-runtime/review-guide-tour";
@@ -19,10 +19,12 @@ export function ReviewGuideExcerpt({
   excerpt,
   file,
   loading,
+  onOpen,
 }: {
   readonly excerpt: PullRequestReviewGuideExcerpt;
   readonly file: FileDiffMetadata | undefined;
   readonly loading: boolean;
+  readonly onOpen: () => void;
 }) {
   const { nativeReviewDiffStyle } = useAppearanceCodeSurface();
   const { themeAppearance } = useAppearancePreferences();
@@ -60,14 +62,19 @@ export function ReviewGuideExcerpt({
     <View className="gap-3">
       {excerpt.caption.trim() ? <PullRequestMarkdown markdown={excerpt.caption} /> : null}
       <View className="overflow-hidden rounded-xl border border-border-subtle bg-grouped-card">
-        <View className="gap-1 border-b border-border-subtle px-3 py-3">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${excerpt.path} at line ${excerpt.start} in full diff`}
+          onPress={onOpen}
+          className="gap-1 border-b border-border-subtle px-3 py-3 active:opacity-60"
+        >
           <View className="flex-row items-center gap-2">
             <SymbolView name="doc.text" size={15} tintColorClassName="accent-icon-muted" />
             <Text className="min-w-0 flex-1 text-xs font-t3-medium" numberOfLines={1}>
               {excerpt.path.split("/").at(-1)}
             </Text>
             <Text className="text-2xs text-foreground-muted">
-              {excerpt.start}–{excerpt.end}
+              {excerpt.start}–{excerpt.end} ↗
             </Text>
           </View>
           {excerpt.path.includes("/") ? (
@@ -79,7 +86,7 @@ export function ReviewGuideExcerpt({
               {excerpt.path.slice(0, excerpt.path.lastIndexOf("/"))}
             </Text>
           ) : null}
-        </View>
+        </Pressable>
         {NativeDiff && data.rows.length ? (
           <View
             style={{ height: Math.min(360, data.rows.length * nativeReviewDiffStyle.rowHeight) }}
@@ -95,6 +102,7 @@ export function ReviewGuideExcerpt({
               tokensPatchJson={bridge.tokensPatchJson}
               tokensResetKey={bridge.tokensResetKey}
               onDebug={bridge.onDebug}
+              onPressLine={onOpen}
             />
           </View>
         ) : (
@@ -104,6 +112,14 @@ export function ReviewGuideExcerpt({
               : `${excerpt.path}:${excerpt.start}–${excerpt.end} is not in the loaded diff.`}
           </Text>
         )}
+        <Pressable
+          accessibilityRole="button"
+          onPress={onOpen}
+          className="min-h-11 flex-row items-center justify-between border-t border-border-subtle px-3 py-2 active:opacity-60"
+        >
+          <Text className="text-xs font-t3-medium">Open full diff</Text>
+          <Text className="text-xs text-foreground-muted">Read context · Add comments</Text>
+        </Pressable>
       </View>
     </View>
   );

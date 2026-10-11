@@ -1,3 +1,4 @@
+import { guideFocusedRows, type GuideDiffFocus } from "./guide/guideDiffFocus";
 import { PullRequestGuideContent } from "./guide/PullRequestGuideScreen";
 import { useReviewGuidesEnabled } from "./guide/useReviewGuide";
 import {
@@ -610,13 +611,17 @@ export function PullRequestFileRouteScreen({
     readonly path: string;
     readonly fileSelectionId?: string;
     readonly replacingDraftId?: string;
+    readonly focus?: GuideDiffFocus;
   }
 >) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const commit = route.params.commit;
   const result = usePullRequestDiff(route.params);
-  const filter = usePullRequestFileFilter(result.parsed);
+  const filter = usePullRequestFileFilter(
+    result.parsed,
+    route.params.focus ? route.params.path : undefined,
+  );
   const detail = useEnvironmentQuery(composerPullRequests.detail(requestTarget(route.params)));
   const { refresh: refreshDetail } = detail;
   useFocusEffect(useCallback(() => refreshDetail(), [refreshDetail]));
@@ -687,6 +692,11 @@ export function PullRequestFileRouteScreen({
   const targetFile =
     data.files.find((file) => file.path === jumpPath) ??
     (!jumpPath || requestedFile ? data.files[0] : undefined);
+  const focus = route.params.focus;
+  const focusedRows = guideFocusedRows(data.rows, targetFile?.id, focus);
+  const focusIndex = focusedRows.length
+    ? data.rows.findIndex((row) => row.id === focusedRows[0]?.id)
+    : -1;
   const [collapsedIds, setCollapsedIds] = useState<readonly string[]>(EMPTY_IDS);
   const [visibleFileId, setVisibleFileId] = useState<string | null>(null);
   const nativeView = useRef<NativeReviewDiffViewHandle>(null);
@@ -700,6 +710,7 @@ export function PullRequestFileRouteScreen({
     )
       return;
     lastSelection.current = { path: route.params.path, id: route.params.fileSelectionId };
+    if (route.params.focus) navigation.setParams({ focus: undefined });
     setJumpPath(route.params.path);
     setSelectedRowId(null);
     jumpStarted.current = false;
@@ -710,7 +721,7 @@ export function PullRequestFileRouteScreen({
     void nativeView.current.scrollToFile(file.id, false).catch(() => {
       jumpStarted.current = false;
     });
-  }, [route.params.path, route.params.fileSelectionId, data.files]);
+  }, [route.params.path, route.params.fileSelectionId, route.params.focus, data.files, navigation]);
   const appliedFilter = useRef(filter.hideTestFiles);
   useEffect(() => {
     if (appliedFilter.current === filter.hideTestFiles) return;
@@ -731,7 +742,7 @@ export function PullRequestFileRouteScreen({
     data,
     collapsedFileIds: collapsedIds,
     viewedFileIds: viewedIds,
-    selectedRowIds: selectedRowId ? [selectedRowId] : EMPTY_IDS,
+    selectedRowIds: selectedRowId ? [selectedRowId] : focusedRows.map((row) => row.id),
     canHighlight: true,
   });
   const [NativeDiffView] = useState(() => resolveNativeReviewDiffView());
@@ -761,6 +772,7 @@ export function PullRequestFileRouteScreen({
         (Platform.OS !== "ios" || decoded)
       ) {
         jumpStarted.current = true;
+        if (focusIndex >= 0) return;
         void nativeView.current.scrollToFile(targetFile.id, false).catch(() => {
           jumpStarted.current = false;
         });
@@ -770,7 +782,7 @@ export function PullRequestFileRouteScreen({
       const lastRow = event.nativeEvent.lastRowIndex;
       if (typeof lastRow === "number" && lastRow >= data.rows.length - 40) loadMore();
     },
-    [updateVisibleRange, data.rows.length, loadMore, targetFile],
+    [updateVisibleRange, data.rows.length, loadMore, targetFile, focusIndex],
   );
   const onToggleFile = useCallback<NonNullable<NativeReviewDiffViewProps["onToggleFile"]>>(
     (event) => {
@@ -934,6 +946,7 @@ export function PullRequestFileRouteScreen({
         {NativeDiffView && data.rows.length && !seekingFile ? (
           <View className="flex-1" collapsable={false}>
             <NativeDiffView
+              initialRowIndex={focusIndex >= 0 ? Math.max(0, focusIndex - 3) : undefined}
               nativeViewRef={nativeView}
               refreshing={result.refreshing}
               onPullToRefresh={result.onPullRefresh}

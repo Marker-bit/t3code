@@ -3,6 +3,7 @@ import { stopFilePaths } from "@t3tools/client-runtime/review-guide-tour";
 import { Pressable, View } from "react-native";
 import { AppText as Text } from "../../../components/AppText";
 import { SymbolView } from "../../../components/AppSymbol";
+import { PullRequestMarkdown } from "../PullRequestMarkdown";
 import { ControlPillMenu } from "../../../components/ControlPillMenu";
 
 /** The stops are a reading sequence, with file context kept beside each idea. */
@@ -41,6 +42,11 @@ export function GuideOutline({
           </ControlPillMenu>
         ) : null}
       </View>
+      {guide.stops[0]?.summary ? (
+        <View className="mb-6">
+          <PullRequestMarkdown markdown={guide.stops[0].summary} />
+        </View>
+      ) : null}
       {guide.stops.map((stop, position) => {
         const paths = stopFilePaths(stop);
         const firstPath = paths[0];
