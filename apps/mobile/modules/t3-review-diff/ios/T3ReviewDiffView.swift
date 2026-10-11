@@ -365,7 +365,6 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
     scrollView.showsHorizontalScrollIndicator = false
     scrollView.backgroundColor = contentView.theme.background
     pullRefreshControl.addTarget(self, action: #selector(handlePullToRefresh), for: .valueChanged)
-    scrollView.refreshControl = pullRefreshControl
     addSubview(scrollView)
 
     contentView.backgroundColor = contentView.theme.background
@@ -838,6 +837,16 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
     pendingScrollFileId = nil
     pendingScrollAnimated = false
     setVerticalContentOffset(0, animated: animated)
+  }
+
+  func setBounces(_ bounces: Bool) {
+    scrollView.bounces = bounces
+    scrollView.alwaysBounceVertical = bounces
+  }
+
+  func setRefreshEnabled(_ enabled: Bool) {
+    if !enabled { pullRefreshControl.endRefreshing() }
+    scrollView.refreshControl = enabled ? pullRefreshControl : nil
   }
 
   @objc private func handlePullToRefresh() {

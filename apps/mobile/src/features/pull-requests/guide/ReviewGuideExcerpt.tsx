@@ -99,6 +99,7 @@ export function ReviewGuideExcerpt({
             }}
           >
             <NativeDiff
+              bounces={false}
               appearanceScheme={themeAppearance}
               rowHeight={nativeReviewDiffStyle.rowHeight}
               contentWidth={2800}
