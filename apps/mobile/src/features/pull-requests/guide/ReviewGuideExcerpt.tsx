@@ -44,8 +44,11 @@ export function ReviewGuideExcerpt({
     const parsed = buildNativeReviewDiffData(
       buildReviewParsedDiff(slice, `guide:${excerpt.path}:${excerpt.start}`),
     );
-    // Excerpts are read-only: the full-file header exposes view/collapse actions.
-    return { ...parsed, rows: parsed.rows.filter((row) => row.kind !== "file") };
+    // The compact header and real line numbers provide context without file/hunk chrome.
+    return {
+      ...parsed,
+      rows: parsed.rows.filter((row) => row.kind !== "file" && row.kind !== "hunk"),
+    };
   }, [slice, excerpt.path, excerpt.start]);
   const bridge = useNativeReviewDiffBridge({
     threadKey: null,
@@ -61,31 +64,24 @@ export function ReviewGuideExcerpt({
   return (
     <View className="gap-3">
       {excerpt.caption.trim() ? <PullRequestMarkdown markdown={excerpt.caption} /> : null}
-      <View className="overflow-hidden rounded-xl border border-border-subtle bg-grouped-card">
+      <View className="overflow-hidden rounded-lg border border-border-subtle">
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`Open ${excerpt.path} at line ${excerpt.start} in full diff`}
           onPress={onOpen}
-          className="gap-1 border-b border-border-subtle px-3 py-3 active:opacity-60"
+          className="min-h-11 flex-row items-center gap-3 border-b border-border-subtle px-3 py-2 active:opacity-60"
         >
-          <View className="flex-row items-center gap-2">
-            <SymbolView name="doc.text" size={15} tintColorClassName="accent-icon-muted" />
-            <Text className="min-w-0 flex-1 text-xs font-t3-medium" numberOfLines={1}>
-              {excerpt.path.split("/").at(-1)}
-            </Text>
-            <Text className="text-2xs text-foreground-muted">
-              {excerpt.start}–{excerpt.end} ↗
-            </Text>
-          </View>
-          {excerpt.path.includes("/") ? (
-            <Text
-              className="text-2xs text-foreground-muted"
-              numberOfLines={1}
-              ellipsizeMode="middle"
-            >
-              {excerpt.path.slice(0, excerpt.path.lastIndexOf("/"))}
-            </Text>
-          ) : null}
+          <Text
+            className="min-w-0 flex-1 text-xs text-foreground-muted"
+            numberOfLines={1}
+            ellipsizeMode="middle"
+          >
+            {excerpt.path}
+          </Text>
+          <Text className="text-2xs text-foreground-muted">
+            {excerpt.start}–{excerpt.end}
+          </Text>
+          <SymbolView name="arrow.up.right" size={13} tintColorClassName="accent-icon-muted" />
         </Pressable>
         {NativeDiff && data.rows.length ? (
           <View
@@ -112,14 +108,6 @@ export function ReviewGuideExcerpt({
               : `${excerpt.path}:${excerpt.start}–${excerpt.end} is not in the loaded diff.`}
           </Text>
         )}
-        <Pressable
-          accessibilityRole="button"
-          onPress={onOpen}
-          className="min-h-11 flex-row items-center justify-between border-t border-border-subtle px-3 py-2 active:opacity-60"
-        >
-          <Text className="text-xs font-t3-medium">Open full diff</Text>
-          <Text className="text-xs text-foreground-muted">Read context · Add comments</Text>
-        </Pressable>
       </View>
     </View>
   );

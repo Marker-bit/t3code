@@ -2429,10 +2429,7 @@ private final class ReviewDiffContentView: UIView, UIGestureRecognizerDelegate {
       return
     }
 
-    let selectionColor = theme.hunkText.withAlphaComponent(0.22)
-    selectionColor.setFill()
-    context.fill(rect)
-
+    // Keep the diff and syntax colors intact; selection lives in the gutter.
     theme.hunkText.withAlphaComponent(0.95).setFill()
     context.fill(CGRect(x: 0, y: rect.minY, width: style.changeBarWidth, height: rect.height))
   }

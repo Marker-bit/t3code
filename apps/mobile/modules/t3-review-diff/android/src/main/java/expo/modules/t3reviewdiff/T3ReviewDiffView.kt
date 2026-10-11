@@ -1198,14 +1198,7 @@ private class DiffCanvasView(context: Context) : View(context) {
     }
     val selected = selectedRowIds.contains(row.id)
     if (selected) {
-      fill(
-        canvas,
-        withAlpha(theme.hunkText, 56),
-        0f,
-        top.toFloat(),
-        width.toFloat(),
-        bottom.toFloat(),
-      )
+      // Keep the diff and syntax colors intact; selection lives in the gutter.
       fill(
         canvas,
         withAlpha(theme.hunkText, 242),
