@@ -303,6 +303,13 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
     scrollViews.current[next]?.scrollToOffset({ offset, animated: false });
     setSection(next);
   };
+  useEffect(() => {
+    if (!guidesEnabled && section === "guide") {
+      requestedSection.current = "overview";
+      currentScrollOffset.current = scrollOffsets.current.overview ?? -insets.top;
+      setSection("overview");
+    }
+  }, [guidesEnabled, section, insets.top]);
   const tabContent = activityContent;
   const filesY = useRef(0);
   const descriptionY = useRef(0);
@@ -319,8 +326,10 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
   const permissions = usePullRequestPermissions(params, pr);
   const stack = usePullRequestStack(params, pr);
   const refreshActivity = useAtomRefresh(composerPullRequests.activity(requestTarget(params)));
+  const refreshGuide = useAtomRefresh(composerPullRequests.reviewGuide(requestTarget(params)));
   const refresh = () => {
     pullRefresh.onRefresh();
+    if (guidesEnabled) refreshGuide();
     stack.refresh();
     refreshActivity();
     filesContent.refresh();

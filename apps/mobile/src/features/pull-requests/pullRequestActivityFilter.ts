@@ -37,7 +37,10 @@ export function filterPullRequestActivity(activity: PullRequestActivity, filter:
       : activity.reviewThreads.filter(
           (thread) =>
             (filter.resolved || !thread.isResolved) &&
-            (filter.bots || thread.comments.some((comment) => !isBot(comment.author))),
+            (filter.bots ||
+              (thread.commentCount ?? 0) > thread.comments.length ||
+              thread.nextCommentsCursor != null ||
+              thread.comments.some((comment) => !isBot(comment.author))),
         );
   const allDiscussionIds = new Set(
     activity.reviewThreads.flatMap((thread) => thread.comments.map((comment) => comment.id)),

@@ -56,6 +56,24 @@ describe("mobile activity filters", () => {
     expect(result.activity.reviewThreads).toHaveLength(1);
     expect(result.hiddenCount).toBe(0);
   });
+  it("keeps partially loaded bot discussions visible", () => {
+    const thread = {
+      ...activity.reviewThreads[0]!,
+      isResolved: false,
+      comments: [comment("bot-reply", bot)],
+    };
+    for (const incomplete of [{ commentCount: 2 }, { nextCommentsCursor: "next" }]) {
+      const result = filterPullRequestActivity(
+        { ...activity, reviewThreads: [{ ...thread, ...incomplete }] },
+        DEFAULT_ACTIVITY_FILTER,
+      );
+      expect(result.activity.reviewThreads).toHaveLength(1);
+    }
+    expect(
+      filterPullRequestActivity({ ...activity, reviewThreads: [thread] }, DEFAULT_ACTIVITY_FILTER)
+        .activity.reviewThreads,
+    ).toEqual([]);
+  });
   it("provides a commits-only view and a comments-only view", () => {
     const commits = filterPullRequestActivity(activity, {
       ...DEFAULT_ACTIVITY_FILTER,

@@ -49,6 +49,8 @@ export function useReviewGuide(params: PullRequestParams) {
       if (result._tag === "Failure") {
         const cause = squashAtomCommandFailure(result);
         setError(cause instanceof Error ? cause.message : "Could not start the review guide.");
+      } else {
+        refresh();
       }
     } finally {
       pending.current = false;
