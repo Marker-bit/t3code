@@ -24,7 +24,7 @@ export function WorkspaceSidebarTabs() {
           onSelectionChange={(tab: WorkspaceTab) => {
             if (tab === workspace.state.selectedTab) return;
             Keyboard.dismiss();
-            navigation.dispatch(StackActions.popToTop());
+            if (navigation.getState()?.index) navigation.dispatch(StackActions.popToTop());
             workspace.dispatch({ type: "select", tab });
           }}
           modifiers={[pickerStyle("segmented")]}
