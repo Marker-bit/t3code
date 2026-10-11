@@ -26,7 +26,7 @@ export function ReviewGuideExcerpt({
   readonly loading: boolean;
   readonly onOpen: () => void;
 }) {
-  const { nativeReviewDiffStyle } = useAppearanceCodeSurface();
+  const { nativeReviewDiffStyle, codeWordBreak } = useAppearanceCodeSurface();
   const { themeAppearance } = useAppearancePreferences();
   const slice = useMemo(() => {
     try {
@@ -60,6 +60,10 @@ export function ReviewGuideExcerpt({
     selectedRowIds: EMPTY_IDS,
     canHighlight: true,
   });
+  const [measuredHeight, setMeasuredHeight] = useState<{ key: string; height: number } | null>(
+    null,
+  );
+  const measurementKey = `${slice}:${codeWordBreak}:${nativeReviewDiffStyle.rowHeight}`;
   const [NativeDiff] = useState(() => resolveNativeReviewDiffView());
   return (
     <View className="gap-3">
@@ -85,7 +89,14 @@ export function ReviewGuideExcerpt({
         </Pressable>
         {NativeDiff && data.rows.length ? (
           <View
-            style={{ height: Math.min(360, data.rows.length * nativeReviewDiffStyle.rowHeight) }}
+            style={{
+              height: Math.min(
+                360,
+                measuredHeight?.key === measurementKey
+                  ? measuredHeight.height
+                  : data.rows.length * nativeReviewDiffStyle.rowHeight,
+              ),
+            }}
           >
             <NativeDiff
               appearanceScheme={themeAppearance}
@@ -97,7 +108,17 @@ export function ReviewGuideExcerpt({
               styleJson={bridge.styleJson}
               tokensPatchJson={bridge.tokensPatchJson}
               tokensResetKey={bridge.tokensResetKey}
-              onDebug={bridge.onDebug}
+              onDebug={(event) => {
+                bridge.onDebug(event);
+                const { message, contentHeight } = event.nativeEvent;
+                if (message === "metrics" && typeof contentHeight === "number") {
+                  setMeasuredHeight((current) =>
+                    current?.key === measurementKey && current.height === contentHeight
+                      ? current
+                      : { key: measurementKey, height: contentHeight },
+                  );
+                }
+              }}
               onPressLine={onOpen}
             />
           </View>

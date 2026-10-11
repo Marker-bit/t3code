@@ -6,6 +6,8 @@ import { SymbolView } from "../../../components/AppSymbol";
 import { PullRequestMarkdown } from "../PullRequestMarkdown";
 import { ControlPillMenu } from "../../../components/ControlPillMenu";
 
+import { useAppearancePreferences } from "../../settings/appearance/AppearancePreferencesProvider";
+
 /** The stops are a reading sequence, with file context kept beside each idea. */
 export function GuideOutline({
   guide,
@@ -16,6 +18,7 @@ export function GuideOutline({
   readonly onOpen: (position: number) => void;
   readonly onRewrite?: () => void;
 }) {
+  const { appearance, setCodeWordBreak } = useAppearancePreferences();
   const files = new Set(guide.stops.flatMap(stopFilePaths));
   return (
     <View>
@@ -26,21 +29,33 @@ export function GuideOutline({
             through {files.size} {files.size === 1 ? "file" : "files"}
           </Text>
         </View>
-        {onRewrite ? (
-          <ControlPillMenu
-            title="Guide options"
-            actions={[{ id: "rewrite", title: "Rewrite guide", image: "arrow.clockwise" }]}
-            onPressAction={() => onRewrite()}
+        <ControlPillMenu
+          title="Guide options"
+          actions={[
+            {
+              id: "word-wrap",
+              title: "Word wrap",
+              image: "text.alignleft",
+              state: appearance.codeWordBreak ? "on" : "off",
+            },
+            ...(onRewrite
+              ? [{ id: "rewrite", title: "Rewrite guide", image: "arrow.clockwise" }]
+              : []),
+          ]}
+          onPressAction={({ nativeEvent }) =>
+            nativeEvent.event === "word-wrap"
+              ? setCodeWordBreak(!appearance.codeWordBreak)
+              : onRewrite?.()
+          }
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Guide options"
+            className="h-11 w-11 items-center justify-center rounded-full active:bg-grouped-card"
           >
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Guide options"
-              className="h-11 w-11 items-center justify-center rounded-full active:bg-grouped-card"
-            >
-              <SymbolView name="ellipsis" size={20} tintColorClassName="accent-icon-muted" />
-            </Pressable>
-          </ControlPillMenu>
-        ) : null}
+            <SymbolView name="ellipsis" size={20} tintColorClassName="accent-icon-muted" />
+          </Pressable>
+        </ControlPillMenu>
       </View>
       {guide.stops[0]?.summary ? (
         <View className="mb-6">

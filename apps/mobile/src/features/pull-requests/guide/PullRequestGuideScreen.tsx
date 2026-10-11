@@ -15,7 +15,10 @@ import { GuideOutline } from "./GuideOutline";
 import { AppText as Text } from "../../../components/AppText";
 import { MaterialButton } from "../../../components/MaterialButton";
 import { ScreenScrollView } from "../../../components/ScreenScrollView";
-import { NativeStackScreenOptions } from "../../../native/StackHeader";
+import { ControlPillMenu } from "../../../components/ControlPillMenu";
+import { MaterialIconButton } from "../../../components/MaterialIconButton";
+import { useAppearancePreferences } from "../../settings/appearance/AppearancePreferencesProvider";
+import { NativeHeaderToolbar, NativeStackScreenOptions } from "../../../native/StackHeader";
 import { PullRequestCardGroup, PullRequestCardRow } from "../PullRequestControls";
 import { PullRequestMarkdown, PullRequestMarkdownRepository } from "../PullRequestMarkdown";
 import { usePullRequestDiff, type PullRequestParams } from "../usePullRequestDiff";
@@ -188,6 +191,7 @@ export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideSto
     guide !== null &&
     (guide.headSha !== route.params.guideHeadSha ||
       guide.generatedAt !== route.params.guideGeneratedAt);
+  const { appearance, setCodeWordBreak } = useAppearancePreferences();
   const notes = stop ? letterStopNotes(stop).lettered : [];
   return (
     <View className="flex-1 bg-screen">
@@ -201,8 +205,40 @@ export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideSto
         <AndroidScreenHeader
           title={`Stop ${route.params.position + 1}`}
           onBack={() => navigation.goBack()}
+          trailing={
+            <ControlPillMenu
+              actions={[
+                {
+                  id: "word-wrap",
+                  title: "Word wrap",
+                  image: "text.alignleft",
+                  state: appearance.codeWordBreak ? "on" : "off",
+                },
+              ]}
+              onPressAction={() => setCodeWordBreak(!appearance.codeWordBreak)}
+            >
+              <View pointerEvents="none">
+                <MaterialIconButton icon="ellipsis" accessibilityLabel="Guide options" />
+              </View>
+            </ControlPillMenu>
+          }
         />
       ) : null}
+      <NativeHeaderToolbar placement="right">
+        <NativeHeaderToolbar.Menu
+          title="Guide options"
+          accessibilityLabel="Guide options"
+          icon="ellipsis"
+        >
+          <NativeHeaderToolbar.MenuAction
+            icon="text.alignleft"
+            isOn={appearance.codeWordBreak}
+            onPress={() => setCodeWordBreak(!appearance.codeWordBreak)}
+          >
+            <NativeHeaderToolbar.Label>Word wrap</NativeHeaderToolbar.Label>
+          </NativeHeaderToolbar.MenuAction>
+        </NativeHeaderToolbar.Menu>
+      </NativeHeaderToolbar>
       <PullRequestMarkdownRepository
         value={`https://${route.params.host ?? "github.com"}/${route.params.repository}`}
       >

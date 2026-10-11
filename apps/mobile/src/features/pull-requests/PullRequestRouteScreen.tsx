@@ -755,7 +755,7 @@ export function PullRequestFileRouteScreen({
     }
   }, [filter.hideTestFiles, result.parsed]);
   const { nativeReviewDiffStyle } = useAppearanceCodeSurface();
-  const { themeAppearance } = useAppearancePreferences();
+  const { themeAppearance, appearance, setCodeWordBreak } = useAppearancePreferences();
   const bridge = useNativeReviewDiffBridge({
     threadKey: null,
     sectionId: `pull-request:${route.params.repository}:${route.params.number}:${commit ?? "all"}`,
@@ -841,6 +841,12 @@ export function PullRequestFileRouteScreen({
             <ControlPillMenu
               actions={[
                 {
+                  id: "word-wrap",
+                  title: "Word wrap",
+                  image: "text.alignleft",
+                  state: appearance.codeWordBreak ? "on" : "off",
+                },
+                {
                   id: "hide-tests",
                   title: "Hide test files",
                   image: "line.3.horizontal.decrease",
@@ -860,7 +866,8 @@ export function PullRequestFileRouteScreen({
                   : []),
               ]}
               onPressAction={({ nativeEvent }) => {
-                if (nativeEvent.event === "hide-tests") toggleTestFiles();
+                if (nativeEvent.event === "word-wrap") setCodeWordBreak(!appearance.codeWordBreak);
+                else if (nativeEvent.event === "hide-tests") toggleTestFiles();
                 else if (
                   nativeEvent.event === "submit-review" ||
                   nativeEvent.event === "comment-on-pr"
@@ -906,6 +913,13 @@ export function PullRequestFileRouteScreen({
               <NativeHeaderToolbar.Label>Add comment</NativeHeaderToolbar.Label>
             </NativeHeaderToolbar.MenuAction>
           ) : null}
+          <NativeHeaderToolbar.MenuAction
+            icon="text.alignleft"
+            isOn={appearance.codeWordBreak}
+            onPress={() => setCodeWordBreak(!appearance.codeWordBreak)}
+          >
+            <NativeHeaderToolbar.Label>Word wrap</NativeHeaderToolbar.Label>
+          </NativeHeaderToolbar.MenuAction>
           <NativeHeaderToolbar.MenuAction
             icon="line.3.horizontal.decrease"
             isOn={filter.hideTestFiles}
