@@ -11,7 +11,12 @@ import { PullRequestActivityFilters } from "./PullRequestActivityFilters";
 import type { LegendListRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
 import Animated from "react-native-reanimated";
-import { PR_ROW_LAYOUT, PR_ROW_ENTER, PR_ROW_EXIT } from "./pullRequestAnimations";
+import {
+  PR_ROW_LAYOUT,
+  PR_ROW_ENTER,
+  PR_ROW_EXIT,
+  PR_POSITION_LAYOUT,
+} from "./pullRequestAnimations";
 import { openOnProviderLabel } from "./pullRequestActions";
 import * as Clipboard from "expo-clipboard";
 import { ControlPillMenu } from "../../components/ControlPillMenu";
@@ -248,14 +253,17 @@ function PullRequestOverview(props: {
           ))}
         </Animated.View>
       ) : null}
-      <View onLayout={(event) => props.onDescriptionLayout(event.nativeEvent.layout.y)}>
+      <Animated.View
+        layout={PR_POSITION_LAYOUT}
+        onLayout={(event) => props.onDescriptionLayout(event.nativeEvent.layout.y)}
+      >
         <PullRequestDescription
           markdown={pr.body}
           onCollapse={props.onDescriptionCollapse}
           expanded={props.descriptionExpanded}
           onExpandedChange={props.onDescriptionExpandedChange}
         />
-      </View>
+      </Animated.View>
     </View>
   );
 }
