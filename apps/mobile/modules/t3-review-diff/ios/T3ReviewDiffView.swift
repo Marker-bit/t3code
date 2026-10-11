@@ -700,14 +700,14 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
     applyPendingScrollIfNeeded()
     emitVisibleFileIfNeeded()
 
-    let debugKey = "\(rows.count):\(Int(bounds.width)):\(Int(bounds.height)):\(Int(height))"
+    let debugKey = "\(rows.count):\(Int(bounds.width)):\(Int(bounds.height)):\(Int(contentView.contentHeight))"
     if debugKey != lastMetricsDebugKey {
       lastMetricsDebugKey = debugKey
       emitDebug("metrics", [
         "rows": rows.count,
         "boundsWidth": Double(bounds.width),
         "boundsHeight": Double(bounds.height),
-        "contentHeight": Double(height),
+        "contentHeight": Double(contentView.contentHeight),
         "contentWidth": Double(style.contentWidth),
         "fileHeaderHeight": Double(style.fileHeaderHeight),
         "rowHeight": Double(style.rowHeight),
@@ -837,6 +837,10 @@ public final class T3ReviewDiffView: ExpoView, UIScrollViewDelegate {
     pendingScrollFileId = nil
     pendingScrollAnimated = false
     setVerticalContentOffset(0, animated: animated)
+  }
+
+  func setScrollEnabled(_ enabled: Bool) {
+    scrollView.isScrollEnabled = enabled
   }
 
   func setBounces(_ bounces: Bool) {

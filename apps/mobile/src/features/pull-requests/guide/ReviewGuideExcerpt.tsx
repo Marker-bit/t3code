@@ -90,15 +90,14 @@ export function ReviewGuideExcerpt({
         {NativeDiff && data.rows.length ? (
           <View
             style={{
-              height: Math.min(
-                360,
+              height:
                 measuredHeight?.key === measurementKey
                   ? measuredHeight.height
                   : data.rows.length * nativeReviewDiffStyle.rowHeight,
-              ),
             }}
           >
             <NativeDiff
+              scrollEnabled={false}
               bounces={false}
               appearanceScheme={themeAppearance}
               rowHeight={nativeReviewDiffStyle.rowHeight}

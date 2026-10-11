@@ -61,6 +61,10 @@ public class T3ReviewDiffModule: Module {
         view.setInitialRowIndex(initialRowIndex)
       }
 
+      Prop("scrollEnabled") { (view: T3ReviewDiffView, enabled: Bool) in
+        view.setScrollEnabled(enabled)
+      }
+
       Prop("bounces") { (view: T3ReviewDiffView, bounces: Bool) in
         view.setBounces(bounces)
       }
