@@ -8,7 +8,10 @@ import {
   type ActivityFilter,
 } from "./pullRequestActivityFilter";
 import { PullRequestActivityFilters } from "./PullRequestActivityFilters";
-import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
+import type { LegendListRef } from "@legendapp/list/react-native";
+import { AnimatedLegendList } from "@legendapp/list/reanimated";
+import Animated from "react-native-reanimated";
+import { PR_ROW_LAYOUT, PR_ROW_ENTER, PR_ROW_EXIT } from "./pullRequestAnimations";
 import { openOnProviderLabel } from "./pullRequestActions";
 import * as Clipboard from "expo-clipboard";
 import { ControlPillMenu } from "../../components/ControlPillMenu";
@@ -229,26 +232,33 @@ function PullRequestOverview(props: {
       <PullRequestCardGroup>
         <PullRequestChecksRow pr={pr} params={props.params} />
         <PullRequestReviewersRow pr={pr} params={props.params} />
-        <PullRequestBranchRow pr={pr} params={props.params} />
-        <PullRequestMergeControls pr={pr} params={props.params} stack={props.stack} />
+        <Animated.View layout={PR_ROW_LAYOUT}>
+          <PullRequestBranchRow pr={pr} params={props.params} />
+        </Animated.View>
+        <Animated.View layout={PR_ROW_LAYOUT}>
+          <PullRequestMergeControls pr={pr} params={props.params} stack={props.stack} />
+        </Animated.View>
       </PullRequestCardGroup>
       {pr.labels.length ? (
-        <View className="flex-row flex-wrap gap-2">
+        <Animated.View layout={PR_ROW_LAYOUT} className="flex-row flex-wrap gap-2">
           {pr.labels.map((label) => (
             <View key={label.name} className="rounded-full bg-grouped-card px-3 py-1">
               <Text className="text-2xs text-foreground-muted">{label.name}</Text>
             </View>
           ))}
-        </View>
+        </Animated.View>
       ) : null}
-      <View onLayout={(event) => props.onDescriptionLayout(event.nativeEvent.layout.y)}>
+      <Animated.View
+        layout={PR_ROW_LAYOUT}
+        onLayout={(event) => props.onDescriptionLayout(event.nativeEvent.layout.y)}
+      >
         <PullRequestDescription
           markdown={pr.body}
           onCollapse={props.onDescriptionCollapse}
           expanded={props.descriptionExpanded}
           onExpandedChange={props.onDescriptionExpandedChange}
         />
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -260,6 +270,7 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
   const [section, setSection] = useState<"overview" | "activity" | "guide">("overview");
   // Keep each tab's native list and measured rows alive when it is hidden.
   const requestedSection = useRef(section);
+  const [listAnimationsReady, setListAnimationsReady] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const filesContent = usePullRequestFilesContent({ params });
   const guidesEnabled = useReviewGuidesEnabled(params);
@@ -423,7 +434,7 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
                 accessibilityElementsHidden={section !== tab}
                 importantForAccessibility={section === tab ? "auto" : "no-hide-descendants"}
               >
-                <LegendList
+                <AnimatedLegendList
                   ref={(list) => {
                     scrollViews.current[tab] = list;
                   }}
@@ -551,7 +562,23 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
                   getItemType={(row) =>
                     row.key.endsWith(":body") ? row.key : row.key.split(":")[0]
                   }
-                  renderItem={({ item }) => item.content}
+                  itemLayoutAnimation={PR_ROW_LAYOUT}
+                  onLoad={() => setListAnimationsReady(true)}
+                  renderItem={({ item }) => (
+                    <Animated.View
+                      key={item.key}
+                      entering={
+                        listAnimationsReady && !item.key.endsWith(":body")
+                          ? PR_ROW_ENTER
+                          : undefined
+                      }
+                      exiting={
+                        listAnimationsReady && !item.key.endsWith(":body") ? PR_ROW_EXIT : undefined
+                      }
+                    >
+                      {item.content}
+                    </Animated.View>
+                  )}
                   recycleItems={false}
                   estimatedItemSize={tab === "overview" ? 64 : 220}
                   maintainVisibleContentPosition={false}
