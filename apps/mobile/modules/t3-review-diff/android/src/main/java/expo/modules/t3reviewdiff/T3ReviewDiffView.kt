@@ -58,7 +58,12 @@ class T3ReviewDiffView(context: Context, appContext: AppContext) : ExpoView(cont
 
   init {
     canvasView.onContentHeightChanged = { height ->
-      onDebug(mapOf("message" to "metrics", "contentHeight" to height / resources.displayMetrics.density))
+      onDebug(
+        mapOf(
+          "message" to "metrics",
+          "contentHeight" to height / resources.displayMetrics.density
+        )
+      )
     }
     canvasView.onRowTap = { row, gesture, target -> handleRowTap(row, gesture, target) }
     canvasView.onVisibleRowsChanged = { first, last ->
