@@ -413,7 +413,7 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
           style={{ flex: 1 }}
           onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
         >
-          {(["overview", "activity", "guide"] as const)
+          {(["overview", "guide", "activity"] as const)
             .filter((tab) => tab !== "guide" || guidesEnabled)
             .map((tab) => (
               <View
@@ -574,10 +574,10 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
                             className="bg-grouped-card"
                             options={[
                               { value: "overview", label: "Overview" },
-                              { value: "activity", label: "Activity" },
                               ...(guidesEnabled
                                 ? [{ value: "guide" as const, label: "Guide" }]
                                 : []),
+                              { value: "activity", label: "Activity" },
                             ]}
                             selected={section}
                             onSelect={selectSection}
