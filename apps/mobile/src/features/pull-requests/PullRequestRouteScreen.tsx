@@ -1,5 +1,11 @@
-import { PullRequestGuideEntry } from "./guide/PullRequestGuideEntry";
-import { PullRequestEntryRow } from "./PullRequestEntryRow";
+import { PullRequestGuideContent } from "./guide/PullRequestGuideScreen";
+import { useReviewGuidesEnabled } from "./guide/useReviewGuide";
+import {
+  filterPullRequestActivity,
+  DEFAULT_ACTIVITY_FILTER,
+  type ActivityFilter,
+} from "./pullRequestActivityFilter";
+import { PullRequestActivityFilters } from "./PullRequestActivityFilters";
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { openOnProviderLabel } from "./pullRequestActions";
 import * as Clipboard from "expo-clipboard";
@@ -24,7 +30,7 @@ import { pullRequestReviewKey } from "./pullRequestReviewDrafts";
 import { type PullRequestDetail, type PullRequestListEntry } from "@t3tools/contracts";
 import { PullRequestOverviewLoading } from "./PullRequestOverviewLoading";
 import { pullRequestStatus } from "./pullRequestStatus";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Linking,
@@ -105,76 +111,39 @@ function PullRequestTabScrollView(props: ScrollViewProps) {
   );
 }
 
-function usePullRequestActivityRows(params: PullRequestParams, commitsOnly: boolean) {
+function usePullRequestActivityRows(params: PullRequestParams, filter: ActivityFilter) {
   const navigation = useNavigation();
   const result = useEnvironmentQuery(composerPullRequests.activity(requestTarget(params)));
+  const filtered = useMemo(
+    () => (result.data ? filterPullRequestActivity(result.data, filter) : null),
+    [result.data, filter],
+  );
   const rows = useMemo(() => {
-    const rows: { key: string; content: ReactElement }[] = [];
-    if (commitsOnly) {
-      for (const commit of result.data?.commits ?? [])
-        rows.push({
-          key: `commit:${commit.oid}`,
-          content: (
-            <Pressable
-              key={commit.oid}
-              accessibilityRole="button"
-              accessibilityLabel={`View changes in commit ${commit.oid.slice(0, 7)}, ${commit.messageHeadline}`}
-              onPress={() =>
-                navigation.dispatch(
-                  StackActions.push("PullRequestFile", {
-                    ...params,
-                    commit: commit.oid,
-                    path: "",
-                  }),
-                )
-              }
-              className={`border-b border-border-subtle pb-3 active:opacity-70 ${rows.length ? "pt-3" : ""}`}
-            >
-              <PullRequestEntryRow
-                leading={
-                  <View className="h-8 items-center justify-center">
-                    <PullRequestAvatar actor={commit.authors?.[0] ?? null} size={24} />
-                  </View>
-                }
-              >
-                <View className="gap-1">
-                  <View className="min-h-8 flex-row items-center gap-2">
-                    <Text className="min-w-0 flex-1 text-sm" numberOfLines={1}>
-                      {commit.messageHeadline}
-                    </Text>
-                    <Text className="font-mono text-2xs text-foreground-muted">
-                      {commit.oid.slice(0, 7)}
-                    </Text>
-                    <SymbolView
-                      name="chevron.right"
-                      size={11}
-                      tintColorClassName="accent-icon-muted"
-                    />
-                  </View>
-                  <Text className="text-2xs text-foreground-muted">
-                    {commit.authors?.map((author) => author.login).join(", ") || "Commit"} ·{" "}
-                    {relativeTime(commit.committedDate)}
-                  </Text>
-                </View>
-              </PullRequestEntryRow>
-            </Pressable>
-          ),
-        });
-    } else if (result.data) {
-      rows.push(...pullRequestTimelineRows(result.data, params, navigation));
+    if (!filtered) return [];
+    const rows = pullRequestTimelineRows(filtered.activity, params, navigation);
+    if (filter.newestFirst) {
+      const notice = rows.at(-1)?.key === "truncated" ? rows.pop() : undefined;
+      rows.reverse();
+      if (notice) rows.push(notice);
     }
-    if (!rows.length && result.data)
+    if (!rows.length)
       rows.push({
         key: "empty",
+        date: "",
         content: (
           <Text className="py-6 text-sm text-foreground-muted">
-            {commitsOnly ? "No commits reported." : "No comments yet."}
+            No activity matches these filters.
           </Text>
         ),
       });
     return rows;
-  }, [commitsOnly, navigation, params, result.data]);
-  return { rows, pending: result.isPending, error: result.error };
+  }, [filtered, filter.newestFirst, params, navigation]);
+  return {
+    rows,
+    hiddenCount: filtered?.hiddenCount ?? 0,
+    pending: result.isPending,
+    error: result.error,
+  };
 }
 
 function PullRequestIdentity(props: {
@@ -254,7 +223,6 @@ function PullRequestOverview(props: {
   const { pr } = props;
   return (
     <View className="gap-5">
-      <PullRequestGuideEntry params={props.params} />
       <PullRequestStackCard params={props.params} state={props.stack} />
       <PullRequestCardGroup>
         <PullRequestChecksRow pr={pr} params={props.params} />
@@ -287,19 +255,20 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const params = route.params;
-  const [section, setSection] = useState<"overview" | "activity" | "commits">("overview");
+  const [section, setSection] = useState<"overview" | "activity" | "guide">("overview");
   // LegendList commits replacement rows after the header. Keep selection with the visible content.
   const [displayedSection, setDisplayedSection] = useState(section);
   const requestedSection = useRef(section);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const filesContent = usePullRequestFilesContent({ params });
-  const activityContent = usePullRequestActivityRows(params, false);
-  const commitsContent = usePullRequestActivityRows(params, true);
+  const guidesEnabled = useReviewGuidesEnabled(params);
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>(DEFAULT_ACTIVITY_FILTER);
+  const activityContent = usePullRequestActivityRows(params, activityFilter);
   const scrollOffsets = useRef<Record<string, number>>({});
   const currentScrollOffset = useRef(-insets.top);
   const bodyY = useRef(0);
   const pendingScrollOffset = useRef<number | null>(null);
-  const selectSection = (next: "overview" | "activity" | "commits") => {
+  const selectSection = (next: "overview" | "activity" | "guide") => {
     if (next === section) return;
     requestedSection.current = next;
     scrollOffsets.current[section] = currentScrollOffset.current;
@@ -313,7 +282,7 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
     setSection(next);
   };
   const tab = section;
-  const tabContent = section === "commits" ? commitsContent : activityContent;
+  const tabContent = activityContent;
   const scrollView = useRef<LegendListRef>(null);
   const commitSectionLayout = () => {
     if (requestedSection.current !== section) return;
@@ -331,7 +300,6 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
   const detailAtom = composerPullRequests.detail(requestTarget(params));
   const result = useEnvironmentQuery(detailAtom);
   const pullRefresh = usePullToRefresh(detailAtom);
-  const activity = useEnvironmentQuery(composerPullRequests.activity(requestTarget(params)));
   const { refresh: refreshDetail } = result;
   useFocusEffect(useCallback(() => refreshDetail(), [refreshDetail]));
   const pr = result.data;
@@ -484,7 +452,7 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
                 content: (
                   <View
                     onLayout={
-                      tab === "overview" || tabContent.rows.length === 0
+                      tab !== "activity" || tabContent.rows.length === 0
                         ? commitSectionLayout
                         : undefined
                     }
@@ -529,7 +497,15 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
                         </View>
                       </View>
                     ) : null}
-                    {tab !== "overview" ? (
+                    {tab === "guide" ? <PullRequestGuideContent params={params} /> : null}
+                    {tab === "activity" ? (
+                      <PullRequestActivityFilters
+                        value={activityFilter}
+                        onChange={setActivityFilter}
+                        hiddenCount={tabContent.hiddenCount}
+                      />
+                    ) : null}
+                    {tab === "activity" ? (
                       <PullRequestReadStatus
                         pending={tabContent.pending}
                         error={tabContent.error}
@@ -538,24 +514,29 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
                   </View>
                 ),
               },
-              ...(tab === "overview" ? (identity ? filesContent.rows : []) : tabContent.rows).map(
-                (row) => ({
-                  ...row,
-                  key: `${tab}:${row.key}`,
-                  content:
-                    tab !== "overview" ? (
-                      <View onLayout={commitSectionLayout}>{row.content}</View>
-                    ) : (
-                      row.content
-                    ),
-                }),
-              ),
+              ...(tab === "overview"
+                ? identity
+                  ? filesContent.rows
+                  : []
+                : tab === "activity"
+                  ? tabContent.rows
+                  : []
+              ).map((row) => ({
+                ...row,
+                key: `${tab}:${row.key}`,
+                content:
+                  tab !== "overview" ? (
+                    <View onLayout={commitSectionLayout}>{row.content}</View>
+                  ) : (
+                    row.content
+                  ),
+              })),
             ]}
             keyExtractor={(row) => row.key}
             getItemType={(row) => (row.key.endsWith(":body") ? row.key : row.key.split(":")[0])}
             renderItem={({ item }) => item.content}
             recycleItems={false}
-            estimatedItemSize={tab === "overview" ? 64 : tab === "commits" ? 80 : 220}
+            estimatedItemSize={tab === "overview" ? 64 : 220}
             maintainVisibleContentPosition={false}
             ListHeaderComponent={
               <>
@@ -576,12 +557,7 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
                       options={[
                         { value: "overview", label: "Overview" },
                         { value: "activity", label: "Activity" },
-                        {
-                          value: "commits",
-                          label: activity.data
-                            ? `Commits ${activity.data.commits.length}`
-                            : "Commits",
-                        },
+                        ...(guidesEnabled ? [{ value: "guide" as const, label: "Guide" }] : []),
                       ]}
                       selected={displayedSection}
                       onSelect={selectSection}

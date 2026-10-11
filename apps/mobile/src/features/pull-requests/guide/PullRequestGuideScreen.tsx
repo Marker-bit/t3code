@@ -68,64 +68,54 @@ function GuideNotice({ state }: { readonly state: ReturnType<typeof useReviewGui
   );
 }
 
-export function PullRequestGuideScreen({ route }: StaticScreenProps<PullRequestParams>) {
+export function PullRequestGuideContent({ params }: { readonly params: PullRequestParams }) {
   const navigation = useNavigation();
-  const state = useReviewGuide(route.params);
+  const state = useReviewGuide(params);
   const { guide, stale } = reviewGuideState(state.data);
-  const insets = useSafeAreaInsets();
   return (
-    <View className="flex-1 bg-screen">
-      <NativeStackScreenOptions options={{ title: "Review guide", headerTitle: "Review guide" }} />
-      {Platform.OS === "android" ? (
-        <AndroidScreenHeader title="Review guide" onBack={() => navigation.goBack()} />
-      ) : null}
-      <ScreenScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 20 }}
-      >
-        {!state.enabled ? (
-          <Text>Review guides are disabled for this server.</Text>
-        ) : (
-          <>
-            {state.isPending && !state.data ? (
-              <Text className="text-foreground-muted">Loading review guide…</Text>
-            ) : (
-              <GuideNotice state={state} />
-            )}
-            {guide ? (
-              <>
-                <Text className="text-xs text-foreground-muted">
-                  {guide.stops.length} stops · read in order
-                </Text>
-                <PullRequestCardGroup>
-                  {guide.stops.map((stop, position) => (
-                    <PullRequestCardRow
-                      key={`${guide.headSha}:${JSON.stringify(stop)}`}
-                      title={`${position + 1}. ${stop.title}`}
-                      detail={stopSubline(stop)}
-                      icon={stop.attention ? "eye" : "text.alignleft"}
-                      last={position === guide.stops.length - 1}
-                      onPress={() =>
-                        navigation.dispatch(
-                          StackActions.push("PullRequestGuideStop", {
-                            ...route.params,
-                            position,
-                            guideHeadSha: guide.headSha,
-                            guideGeneratedAt: guide.generatedAt,
-                          }),
-                        )
-                      }
-                    />
-                  ))}
-                </PullRequestCardGroup>
-                {state.canWrite && !state.running && !stale && !state.startError && !state.error ? (
-                  <MaterialButton label="Rewrite guide" onPress={() => void state.write()} />
-                ) : null}
-              </>
-            ) : null}
-          </>
-        )}
-      </ScreenScrollView>
+    <View className="gap-5">
+      {!state.enabled ? (
+        <Text>Review guides are disabled for this server.</Text>
+      ) : (
+        <>
+          {state.isPending && !state.data ? (
+            <Text className="text-foreground-muted">Loading review guide…</Text>
+          ) : (
+            <GuideNotice state={state} />
+          )}
+          {guide ? (
+            <>
+              <Text className="text-xs text-foreground-muted">
+                {guide.stops.length} stops · read in order
+              </Text>
+              <PullRequestCardGroup>
+                {guide.stops.map((stop, position) => (
+                  <PullRequestCardRow
+                    key={`${guide.headSha}:${JSON.stringify(stop)}`}
+                    title={`${position + 1}. ${stop.title}`}
+                    detail={stopSubline(stop)}
+                    icon={stop.attention ? "eye" : "text.alignleft"}
+                    last={position === guide.stops.length - 1}
+                    onPress={() =>
+                      navigation.dispatch(
+                        StackActions.push("PullRequestGuideStop", {
+                          ...params,
+                          position,
+                          guideHeadSha: guide.headSha,
+                          guideGeneratedAt: guide.generatedAt,
+                        }),
+                      )
+                    }
+                  />
+                ))}
+              </PullRequestCardGroup>
+              {state.canWrite && !state.running && !stale && !state.startError && !state.error ? (
+                <MaterialButton label="Rewrite guide" onPress={() => void state.write()} />
+              ) : null}
+            </>
+          ) : null}
+        </>
+      )}
     </View>
   );
 }
@@ -274,7 +264,9 @@ export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideSto
               ) : (
                 <MaterialButton
                   label="Finish tour"
-                  onPress={() => navigation.navigate("PullRequestGuide", route.params)}
+                  onPress={() =>
+                    navigation.dispatch(StackActions.popTo("PullRequest", route.params))
+                  }
                 />
               )}
             </>
