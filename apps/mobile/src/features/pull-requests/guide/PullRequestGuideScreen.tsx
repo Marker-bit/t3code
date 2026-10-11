@@ -256,17 +256,6 @@ export function PullRequestGuideStopScreen({ route }: StaticScreenProps<GuideSto
             ) : (
               <>
                 <GuideNotice state={state} />
-                <View
-                  accessibilityRole="progressbar"
-                  accessibilityValue={{ min: 0, max: guide?.stops.length ?? 1, now: position + 1 }}
-                  accessibilityLabel="Tour position"
-                  className="h-1 overflow-hidden rounded-full bg-grouped-card"
-                >
-                  <View
-                    className="h-full rounded-full bg-foreground-muted"
-                    style={{ width: `${((position + 1) / (guide?.stops.length ?? 1)) * 100}%` }}
-                  />
-                </View>
                 <Text className="text-2xl leading-8 font-t3-semibold">{stop.title}</Text>
                 <PullRequestMarkdown markdown={stop.summary} />
                 {stop.attention ? (
