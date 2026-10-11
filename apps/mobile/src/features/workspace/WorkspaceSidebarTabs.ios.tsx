@@ -29,7 +29,7 @@ export function WorkspaceSidebarTabs() {
           }}
           modifiers={[pickerStyle("segmented")]}
         >
-          <Text modifiers={[tag("threads")]}>Chats</Text>
+          <Text modifiers={[tag("threads")]}>Threads</Text>
           <Text modifiers={[tag("pullRequests")]}>Pull requests</Text>
         </Picker>
       </Host>
