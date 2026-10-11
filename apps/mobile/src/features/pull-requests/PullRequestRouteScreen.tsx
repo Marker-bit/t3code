@@ -248,17 +248,14 @@ function PullRequestOverview(props: {
           ))}
         </Animated.View>
       ) : null}
-      <Animated.View
-        layout={PR_ROW_LAYOUT}
-        onLayout={(event) => props.onDescriptionLayout(event.nativeEvent.layout.y)}
-      >
+      <View onLayout={(event) => props.onDescriptionLayout(event.nativeEvent.layout.y)}>
         <PullRequestDescription
           markdown={pr.body}
           onCollapse={props.onDescriptionCollapse}
           expanded={props.descriptionExpanded}
           onExpandedChange={props.onDescriptionExpandedChange}
         />
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -562,7 +559,9 @@ export function PullRequestRouteScreen({ route }: StaticScreenProps<PullRequestP
                   getItemType={(row) =>
                     row.key.endsWith(":body") ? row.key : row.key.split(":")[0]
                   }
-                  itemLayoutAnimation={PR_ROW_LAYOUT}
+                  // The overview body contains the clipped description and owns collapse scroll
+                  // correction. Animating that cell fights both; file rows still fade individually.
+                  itemLayoutAnimation={tab === "overview" ? undefined : PR_ROW_LAYOUT}
                   onLoad={() => setListAnimationsReady(true)}
                   renderItem={({ item }) => (
                     <Animated.View
