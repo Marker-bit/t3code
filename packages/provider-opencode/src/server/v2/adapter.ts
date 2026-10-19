@@ -507,7 +507,6 @@ const stringField = (record: Readonly<Record<string, unknown>> | undefined, key:
   return typeof value === "string" && value.trim().length > 0 ? value : undefined;
 };
 
-/** How a background subagent ended, from the `state` of OpenCode's report to its parent. */
 const reportOutcome = (state: string | undefined) =>
   state === "completed"
     ? ("completed" as const)
